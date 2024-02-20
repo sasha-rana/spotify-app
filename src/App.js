@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import TopTracks from './TopTracks';
+import FollowedArtists from './FollowedArtists.js';
 import LogOut from './LogOut';
 import { useSpotify } from './useSpotify.ts'
 import { Scopes, SearchResults, SpotifyApi } from '@spotify/web-api-ts-sdk';
@@ -18,6 +19,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<TopTracks sdk={sdk} />} />
+        <Route path="/F" element={<FollowedArtists sdk={sdk} />} />
         <Route path="/logout" element={<LogOut sdk={sdk} />} />
       </Routes>
     </Router>
