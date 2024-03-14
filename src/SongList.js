@@ -54,9 +54,10 @@ const SongFilter = ({ criteria, onCriteriaChange }) => {
       const [selectedPlaylist, setSelectedPlaylist] = useState('');
       const [isLoading, setIsLoading] = useState(false);
       const [playlistDetails, setPlaylistDetails] = useState();
-      const [playlists, setPlaylists] = useState([]);
+      const [playlists, setPlaylists] = useState(undefined);
 
-      const sdk = props.sdk;
+      let sdk = props.sdk;
+      console.log("sdk in SongList:" + sdk);
     
       const handleSelectChange = async (event) => {
         const playlistId = event.target.value;
@@ -78,18 +79,22 @@ const SongFilter = ({ criteria, onCriteriaChange }) => {
         }
       };
 
-      useEffect(async () => {
-        // Load playlists when the component mounts
-        if (sdk !== null && playlists.length === 0){
-            playlists = await loadPlaylists(sdk);
-            setPlaylists([]);
+      useEffect(() => {
+        console.log(playlists);
+        if (sdk !== undefined && playlists === undefined){
+          async function fetchData() {
+            // Load playlists when the component mounts          
+            console.log("sdk present");
+            console.log(sdk);
+            let playlistArray = await loadPlaylists(sdk);
+            setPlaylists(playlistArray);
+            // Clear playlist details when selection is cleared or changed
+            //setPlaylistDetails([]);
+          }
+          fetchData();
         }
-        // Clear playlist details when selection is cleared or changed
-        //setPlaylistDetails([]);
-
       }, [selectedPlaylist,sdk]);
-    
-        
+            
       return (
         <Box flex={1} p={4} overflowY="auto">
             
@@ -102,7 +107,7 @@ const SongFilter = ({ criteria, onCriteriaChange }) => {
 
           {/* Display selected playlist */}
           <Select placeholder="Select Playlist" onChange={handleSelectChange} mb={4}>
-          {playlists.map((playlist) => (   
+        {playlists !== undefined && playlists.map((playlist) => (   
             <option value={playlist.id}>{playlist.name}</option>
           ))}
           </Select>
@@ -134,7 +139,6 @@ const SongFilter = ({ criteria, onCriteriaChange }) => {
                     <Td>{track.album.name}</Td>
                     </Tr>
                 ))
-                
             }
             </Tbody>
           </Table>

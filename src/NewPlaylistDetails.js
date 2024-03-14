@@ -52,7 +52,7 @@ const NewPlayListDetails = (props) => {
         </Box>
       </Flex>
       <Box flex={1}>
-        <SongList title="New Playlist" playlists={[]}  songs={songsInNewPlaylist} />
+        <SongList title="New Playlist" sdk={sdk} />
       </Box>
     </Flex>
   );

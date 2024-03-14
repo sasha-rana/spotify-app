@@ -29,7 +29,7 @@ async function getPlaylistDetails(sdk,playlistId) {
         localStorage.setItem('playlistTracks-' + playlistId, JSON.stringify(tracks));
     }
     // now load artists for the tracks 
-    let artists = loadArtists(sdk, tracks);
+    let artists = await loadArtists(sdk, tracks);
     
     return {tracks, artists};
 }
