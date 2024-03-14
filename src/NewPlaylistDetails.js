@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { Box, Flex, IconButton, Select, Table, Thead, Tbody, Tr, Th, Td, Checkbox, CheckboxGroup, Stack, Text } from '@chakra-ui/react';
 import { AddIcon, CloseIcon } from '@chakra-ui/icons';
 import { SongFilter, SongList } from './SongList';
+import { useLocation } from 'react-router-dom';
 
 
 const HackedPlaylistList = () => { 
@@ -12,7 +13,13 @@ const HackedPlaylistList = () => {
     ];
 }
 
-const NewPlayListDetails = () => {
+const NewPlayListDetails = (props) => {
+
+  // SPOTIFY SDK GLUE - BEGIN 
+  const sdk = props.sdk;
+  const location = useLocation();
+  // SPOTIFY SDK GLUE - END
+
   // Example songs data
   const songsInExistingPlaylist = [
     { key: '1', name: 'Song 1', artist: 'Artist 1', genre: 'Genre 1' },
@@ -41,7 +48,7 @@ const NewPlayListDetails = () => {
       <Flex flex={1} borderRight="1px" borderColor="gray.200">
         <SongFilter criteria={criteria} onCriteriaChange={handleCriteriaChange} />
         <Box flex={1} p={4}>
-            <SongList title="Existing Playlist: Playlist 123" playlists={HackedPlaylistList()} songs={songsInExistingPlaylist} />
+            <SongList title="Existing Playlist: Playlist 123" sdk={sdk} />
         </Box>
       </Flex>
       <Box flex={1}>
