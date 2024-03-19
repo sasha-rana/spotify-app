@@ -1,18 +1,11 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { Box, Flex, Select,  Modal, ModalOverlay, Spinner } from '@chakra-ui/react';
+import { Box, Flex, Select,  Modal, ModalOverlay, Spinner, VStack, Input, Button } from '@chakra-ui/react';
 import { AddIcon, CloseIcon } from '@chakra-ui/icons';
-import { SongFilter, SongList } from './SongList';
+import { SongList, SelectedSongList } from './SongList';
 import { useLocation } from 'react-router-dom';
 import { getPlaylistDetails } from './SongLoader';
 import { loadPlaylists } from './PlaylistLoader';
-
-const HackedPlaylistList = () => { 
-    return [
-        { id: '1', name: 'Playlist 1' },
-        { id: '2', name: 'Playlist 2' },
-        { id: '3', name: 'Playlist 3' }
-    ];
-}
+import  FilterList  from './FilterList';
 
 const NewPlayListDetails = (props) => {
 
@@ -20,21 +13,27 @@ const NewPlayListDetails = (props) => {
     const [selectedPlaylist, setSelectedPlaylist] = useState('');
     const [playlistDetails, setPlaylistDetails] = useState();
     const [playlists, setPlaylists] = useState([]);
+    const [playlistArtists, setPlaylistArtists] = useState([]);
+    const [playlistGenres, setPlaylistGenres] = useState([]);
+    const [selectedArtists, setSelectedArtists] = useState(new Set());
+    const [selectedGenres, setSelectedGenres] = useState(new Set());
+    const [filterType, setFilterType] = useState("Artist");
+    const [selectedSongs, setSelectedSongs] = useState([])
+    const [playlistName, setPlaylistName] = useState('');
+
 
     const sdk = props.sdk;
     console.log("sdk in SongList:" + sdk);
 
     useEffect(() => {
         console.log(playlists);
-        if (sdk !== undefined && playlists === undefined){
+        if (sdk !== undefined){
           async function fetchData() {
             // Load playlists when the component mounts          
             console.log("sdk present");
             console.log(sdk);
             let playlistArray = await loadPlaylists(sdk);
             setPlaylists(playlistArray);
-            // Clear playlist details when selection is cleared or changed
-            //setPlaylistDetails([]);
           }
           fetchData();
         }
@@ -42,25 +41,6 @@ const NewPlayListDetails = (props) => {
 
   const location = useLocation();
   // SPOTIFY SDK GLUE - END
-
-  // Example songs data
-  const songsInExistingPlaylist = [
-    { key: '1', name: 'Song 1', artist: 'Artist 1', genre: 'Genre 1' },
-    { key: '2', name: 'Song 2 Reall long description', artist: 'Artist 1', genre: 'Genre 1' },
-    // Add more song data here
-  ];
-
-  const songsInNewPlaylist = [
-    { key: '1', name: 'Song 1', artist: 'Artist 1', genre: 'Genre 1' },
-    { key: '2', name: 'Song 2 Reall long description', artist: 'Artist 1', genre: 'Genre 1' },
-    // Add more song data here
-  ];
-
-  // Example criteria data
-  const criteria = [
-    { key: '1', label: 'Criteria 1' },
-    // Add more criteria here
-  ];
 
   // Handler for changing the selected playlist
   const handleSelectChange = async (event) => {
@@ -73,6 +53,36 @@ const NewPlayListDetails = (props) => {
         // Assuming getPlaylistDetails is an async function returning playlist details
         const details = await getPlaylistDetails(sdk,playlistId);
         setPlaylistDetails(details);
+        // now get artists and genre set 
+        let artists = new Array();
+        let genres = new Array();
+        let artistSet = new Set();
+        let genreSet = new Set();
+        let genreId = 0;
+        
+        for (let artist of details.artists){
+            if (!artistSet.has(artist.id)){
+              // add artist to the array
+              artists.push({name: artist.name, id: artist.id});
+              artistSet.add(artist.id);
+              // print the artists genres for debugging
+              console.log(artist.name);
+              console.log(artist.genres);
+              for (let genre of artist.genres){
+                if (!genreSet.has(genre)){
+                  genres.push({name: genre, id: genreId++});
+                  genreSet.add(genre);
+                }
+              }
+            }
+        }
+        setPlaylistArtists(artists);
+        setPlaylistGenres(genres);
+        console.log("Setting selected artists and genres");
+        console.log(artistSet);
+        console.log(genreSet);
+        setSelectedArtists(artistSet);
+        setSelectedGenres(genreSet);        
     } catch (error) {
         console.error("Failed to load playlist details:", error);
         // Handle error as needed
@@ -81,8 +91,53 @@ const NewPlayListDetails = (props) => {
     }
   };
 
-  const handleCriteriaChange = (criterion) => {
-    // Handle criteria change
+  const selectDeselectSong = (songId,songDetails,selected) => {
+    console.log("Selecting song:" + songId + " selected:" + selected);
+    // clone the selected songs array
+    let currentSelectedSongs = [...selectedSongs];
+    if (selected){
+      const exists = currentSelectedSongs.find((song) => song.id === songId);
+      if (!exists){
+        currentSelectedSongs.push(songDetails);
+      }
+    }
+    else {
+      currentSelectedSongs = currentSelectedSongs.filter((song) => song.id !== songId);
+    }
+    console.log("Current Selected Songs");
+    console.log(currentSelectedSongs);
+    setSelectedSongs(currentSelectedSongs);
+  }
+
+  const handleCriteriaChange = (selectedArtists,selectedGenres,filterType) => {
+    setSelectedArtists(selectedArtists);
+    setSelectedGenres(selectedGenres);
+    setFilterType(filterType);
+  }
+
+  const createPlaylist = async () => {
+    console.log("Creating Playlist");
+    
+    const createPlaylistRequest = {
+      name: playlistName,
+      public: true, // This is optional
+      collaborative: false, // This is also optional
+      description: "New Playlist", // Optional as well
+    };
+
+    let profile = await sdk.currentUser.profile();
+    console.log(profile);
+    let playlist = await sdk.playlists.createPlaylist(profile.id,createPlaylistRequest);
+    
+    
+    let uris = selectedSongs.map((song) => "spotify:track:" + song.id);
+    // make them comma separated
+    //uris = uris.join(",");
+
+    await sdk.playlists.addItemsToPlaylist(playlist.id,uris);
+
+    setSelectedSongs([]);
+    
   }
 
   return (
@@ -91,24 +146,41 @@ const NewPlayListDetails = (props) => {
             <ModalOverlay />
             <Spinner size="xl" />
         </Modal>
-
-
-      <Flex flex={1} borderRight="1px" borderColor="gray.200">
-        <SongFilter criteria={criteria} onCriteriaChange={handleCriteriaChange} />
-
-        <Select placeholder="Select Playlist" onChange={handleSelectChange} mb={4}>
-          {playlists.map((playlist) => (
-            <option key={playlist.id} value={playlist.id}>{playlist.name}</option>
-          ))}
-        </Select>
-        
-        <Box flex={1} p={4}>
-            <SongList title="Existing Playlist: Playlist 123" playlistDetails={playlistDetails} />
+        <Box flex={0.3} borderWidth="1px" borderColor="gray.200" p={4}>
+          {/* Assuming FilterList is a component that you will implement */}
+          <FilterList playlistArtists={playlistArtists} playlistGenres={playlistGenres} callback={handleCriteriaChange} />
         </Box>
+
+        <Flex direction="column" flex={0.7} borderRight="1px" borderColor="gray.200" p={4}>
+          <VStack width="100%" spacing={4}>
+            <Select placeholder="Select Playlist" onChange={handleSelectChange} mb={4} width="100%">
+              {playlists !== undefined && playlists.map((playlist) => (
+                <option key={playlist.id} value={playlist.id}>{playlist.name}</option>
+              ))}
+            </Select>
+      
+          <Box width="100%">
+              <SongList title="Existing Playlist: Playlist 123" 
+                playlistDetails={playlistDetails} 
+                selectedArtists={new Set(selectedArtists)} 
+                selectedGenres={new Set(selectedGenres)} 
+                selectionMode={filterType}
+                selectedSongs={selectedSongs}
+                selectionCallback={selectDeselectSong}
+                />
+          </Box>
+        </VStack>
       </Flex>
-      <Box flex={1}>
-        <SongList title="New Playlist" sdk={sdk} />
-      </Box>
+      <Flex direction="column" flex={0.7} borderRight="1px" borderColor="gray.200" p={4}>
+        <VStack width="100%" spacing={4}>
+          <Flex width="100%">
+            <Input flex="1" placeholder="New Playlist Name" onChange={(event)=> { setPlaylistName(event.target.value); }}/>
+            <Button ml={2} isDisabled={selectedSongs.length === 0 || playlistName.length === 0} onClick={createPlaylist}>Create</Button>
+          </Flex>
+
+          <SelectedSongList selectedSongs={selectedSongs} />
+        </VStack>
+      </Flex>
     </Flex>
   );
 };
