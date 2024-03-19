@@ -1,8 +1,8 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { Box, Flex, IconButton, Select, Table, Thead, Tbody, Tr, Th, Td, Checkbox, CheckboxGroup, Stack, Text, Modal, ModalOverlay, Spinner } from '@chakra-ui/react';
+import { Box, Flex, IconButton, Select, Table, Thead, Tbody, Tr, Th, Td, Checkbox, CheckboxGroup, Stack, Text } from '@chakra-ui/react';
 import { AddIcon, CloseIcon } from '@chakra-ui/icons';
 import { getPlaylistDetails } from './SongLoader';
-import { loadPlaylists } from './PlaylistLoader';
+
 
 //importing statements from chakra ui library 
 //utility function to determine if a particular song (identified by its key) is selected (placeholder function)
@@ -51,67 +51,9 @@ const SongFilter = ({ criteria, onCriteriaChange }) => {
   };
   
   const SongList = (props) => {
-      const [selectedPlaylist, setSelectedPlaylist] = useState('');
-      const [isLoading, setIsLoading] = useState(false);
-      const [playlistDetails, setPlaylistDetails] = useState();
-      const [playlists, setPlaylists] = useState(undefined);
-
-      let sdk = props.sdk;
-      console.log("sdk in SongList:" + sdk);
-    
-      const handleSelectChange = async (event) => {
-        const playlistId = event.target.value;
-        setSelectedPlaylist(playlistId);
-    
-        if (!playlistId) return;
-    
-        setIsLoading(true);
-
-        try {
-          // Assuming getPlaylistDetails is an async function returning playlist details
-          const details = await getPlaylistDetails(sdk,playlistId);
-          setPlaylistDetails(details);
-        } catch (error) {
-          console.error("Failed to load playlist details:", error);
-          // Handle error as needed
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      useEffect(() => {
-        console.log(playlists);
-        if (sdk !== undefined && playlists === undefined){
-          async function fetchData() {
-            // Load playlists when the component mounts          
-            console.log("sdk present");
-            console.log(sdk);
-            let playlistArray = await loadPlaylists(sdk);
-            setPlaylists(playlistArray);
-            // Clear playlist details when selection is cleared or changed
-            //setPlaylistDetails([]);
-          }
-          fetchData();
-        }
-      }, [selectedPlaylist,sdk]);
-            
+      const playlistDetails = props.playlistDetails;
       return (
         <Box flex={1} p={4} overflowY="auto">
-            
-          {/* Modal for Loading State */}
-          <Modal isOpen={isLoading} onClose={() => {}} isCentered>
-                <ModalOverlay />
-                <Spinner size="xl" />
-          </Modal>
-
-
-          {/* Display selected playlist */}
-          <Select placeholder="Select Playlist" onChange={handleSelectChange} mb={4}>
-        {playlists !== undefined && playlists.map((playlist) => (   
-            <option value={playlist.id}>{playlist.name}</option>
-          ))}
-          </Select>
-    
           <Table variant="simple">
             <Thead>
               <Tr>

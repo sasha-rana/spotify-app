@@ -34,34 +34,76 @@ async function getPlaylistDetails(sdk,playlistId) {
     return {tracks, artists};
 }
 
+// Helper function to split an array into chunks
+const chunkArray = (array, chunkSize) => {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+  };
+  
+// Function to fetch metadata for multiple artists
+const fetchArtistsByIds = async (artistIds, sdk) => {
+    try {
+        // chunk the artist ids array into sub arrays of 10 each
+        const artistChunks = chunkArray(artistIds, 3);
+        const allArtists = [];
+      
+
+        for (const chunk of artistChunks) {
+            // Map each ID to a fetch promise
+            const fetchPromises = chunk.map(id => sdk.artists.get(id));
+            console.log("Fetching " + chunk.length + " artists");
+            // Use Promise.all to wait for all promises to resolve
+            const artists = await Promise.all(fetchPromises);
+            console.log("Fetched " + chunk.length + " artists");
+            // store artists in the local storage
+            for (var artist of artists){
+                localStorage.setItem('artist-' + artist.id, JSON.stringify(artist));
+            }
+            allArtists.push(artists);
+        }  
+        // artists will be an array of results from each promise
+        return allArtists;
+    } catch (error) {
+      console.error("Failed to fetch artists:", error);
+      throw error; // Rethrow or handle error as appropriate
+    }
+  };
+  
+
 // load artists from the spotify sdk give the tracks list  
 async function loadArtists(sdk, tracks){
     const visitedArtists = new Set();
-    const artists = [];
+    let artists = [];
+    let artistIds = [];
+    let fetchedArtists = [];
+    // collect artist ids for tracks 
     for(var track of tracks){
-        console.log("Processing Track");
-        console.log(track);
         for(var artist of track.artists){
-            //check to see if we have not already seen this artist 
-            if(!visitedArtists.has(artist.id)){
-                // check if the artist is in the local storage 
+            if (!visitedArtists.has(artist.id)){
+                // if we don't have this artist cached 
                 if (localStorage.getItem('artist-' + artist.id) === null) {
-                    console.log("Fetching Artist:" + artist.name);
-                    const artistDetails = await sdk.artists.get(artist.id);
-                    console.log("Result:");
-                    console.log(artistDetails);
-                    artists.push(artistDetails);
-                    visitedArtists.add(artist.id);
-                    localStorage.setItem('artist-' + artist.id, JSON.stringify(artistDetails));
+                    console.log("Artist not in local storage:" + artist.name);
+                    artistIds.push(artist.id);
                 }
-                else {
+                else { 
+                    console.log("Artist already in local storage:" + artist.name);
                     const artistDetails = JSON.parse(localStorage.getItem('artist-' + artist.id));
                     artists.push(artistDetails);
-                    visitedArtists.add(artist.id);
                 }
+                visitedArtists.add(artist.id);
             }
         }
     }
+
+    // fetch artists by their IDs
+    fetchedArtists = await fetchArtistsByIds(artistIds, sdk);
+    // merge the two arrays
+    artists = artists.concat(fetchedArtists.flat());
+
+    return artists;
 }
 
 export {getPlaylistDetails};
